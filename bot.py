@@ -1,14 +1,29 @@
 import os
+import asyncio
+from aiohttp import web
 import discord
 from discord.ext import commands
 
+# --- SCRIPT WEB PENTRU RENDER (Gratuit) ---
+async def handle(request):
+    return web.Response(text="Botul este activ!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+# --- CODUL BOTULUI DE DISCORD ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Ia ID-urile direct din variabilele de mediu sau le poți pune direct aici
 DISPATCH_CHANNEL_ID = int(os.getenv("DISPATCH_CHANNEL_ID", "123456789012345678"))
 ROLE_TO_PING_ID = int(os.getenv("ROLE_TO_PING_ID", "987654321098765432"))
 
@@ -46,5 +61,11 @@ async def panica(ctx, *, locatie: str = "Locație nespecificată"):
 async def on_ready():
     print(f"Botul de Dispecerat {bot.user} este online!")
 
-# Rulează botul folosind tokenul din Render
-bot.run(os.getenv("TOKEN"))
+async def main():
+    # Pornește serverul web în paralel cu botul
+    await start_web_server()
+    await bot.start(os.getenv("TOKEN"))
+
+if __name__ == "__main__":
+    asyncio.run(main())
+    
