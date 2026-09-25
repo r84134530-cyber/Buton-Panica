@@ -1,23 +1,24 @@
 import os
-import asyncio
-from aiohttp import web
+from threading import Thread
+from flask import Flask
 import discord
 from discord.ext import commands
 
-# --- SCRIPT WEB PENTRU RENDER (Gratuit) ---
-async def handle(request):
-    return web.Response(text="Botul este activ!")
+# --- Server web simplu cu Flask (pentru a ține Render mulțumit gratuit) ---
+app = Flask('')
 
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
+@app.route('/')
+def home():
+    return "Botul este online!"
 
-# --- CODUL BOTULUI DE DISCORD ---
+def run_web():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
+
+# --- Botul de Discord ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -61,11 +62,8 @@ async def panica(ctx, *, locatie: str = "Locație nespecificată"):
 async def on_ready():
     print(f"Botul de Dispecerat {bot.user} este online!")
 
-async def main():
-    # Pornește serverul web în paralel cu botul
-    await start_web_server()
-    await bot.start(os.getenv("TOKEN"))
-
+# Pornește serverul web în fundal, apoi pornește botul
 if __name__ == "__main__":
-    asyncio.run(main())
+    keep_alive()
+    bot.run(os.getenv("TOKEN"))
     
